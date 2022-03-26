@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+service user {
+    rpc login(loginReq) returns (apiRes);
+    rpc logout(logoutRes) returns (apiRes);
+}
+
+message loginReq{
+    string username = 1;
+    string password = 2;
+}
+
+message logoutRes{}
+
+message apiRes{
+    int32 resCode = 1;
+    string message = 2;
+}
