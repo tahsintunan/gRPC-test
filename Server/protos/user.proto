@@ -2,7 +2,7 @@ syntax = "proto3";
 
 option go_package = "/protos/user";
 
-service user {
+service userAuth {
     rpc login(loginReq) returns (apiRes);
     rpc logout(logoutRes) returns (apiRes);
 }
