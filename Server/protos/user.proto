@@ -4,7 +4,7 @@ option go_package = "/protos/user";
 
 service userAuth {
     rpc login(loginReq) returns (apiRes);
-    rpc logout(logoutRes) returns (apiRes);
+    rpc logout(logoutReq) returns (apiRes);
 }
 
 message loginReq{
@@ -12,7 +12,7 @@ message loginReq{
     string password = 2;
 }
 
-message logoutRes{}
+message logoutReq{}
 
 message apiRes{
     int32 resCode = 1;
