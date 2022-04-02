@@ -2,6 +2,8 @@ syntax = "proto3";
 
 option go_package = "/protos/user";
 
+package user;
+
 service userAuth {
     rpc register(regReq) returns (apiRes);
     rpc login(loginReq) returns (apiRes);

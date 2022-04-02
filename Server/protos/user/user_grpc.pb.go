@@ -33,7 +33,7 @@ func NewUserAuthClient(cc grpc.ClientConnInterface) UserAuthClient {
 
 func (c *userAuthClient) Register(ctx context.Context, in *RegReq, opts ...grpc.CallOption) (*ApiRes, error) {
 	out := new(ApiRes)
-	err := c.cc.Invoke(ctx, "/userAuth/register", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/user.userAuth/register", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +42,7 @@ func (c *userAuthClient) Register(ctx context.Context, in *RegReq, opts ...grpc.
 
 func (c *userAuthClient) Login(ctx context.Context, in *LoginReq, opts ...grpc.CallOption) (*ApiRes, error) {
 	out := new(ApiRes)
-	err := c.cc.Invoke(ctx, "/userAuth/login", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/user.userAuth/login", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func (c *userAuthClient) Login(ctx context.Context, in *LoginReq, opts ...grpc.C
 
 func (c *userAuthClient) Logout(ctx context.Context, in *LogoutReq, opts ...grpc.CallOption) (*ApiRes, error) {
 	out := new(ApiRes)
-	err := c.cc.Invoke(ctx, "/userAuth/logout", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/user.userAuth/logout", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func _UserAuth_Register_Handler(srv interface{}, ctx context.Context, dec func(i
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/userAuth/register",
+		FullMethod: "/user.userAuth/register",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(UserAuthServer).Register(ctx, req.(*RegReq))
@@ -122,7 +122,7 @@ func _UserAuth_Login_Handler(srv interface{}, ctx context.Context, dec func(inte
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/userAuth/login",
+		FullMethod: "/user.userAuth/login",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(UserAuthServer).Login(ctx, req.(*LoginReq))
@@ -140,7 +140,7 @@ func _UserAuth_Logout_Handler(srv interface{}, ctx context.Context, dec func(int
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/userAuth/logout",
+		FullMethod: "/user.userAuth/logout",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(UserAuthServer).Logout(ctx, req.(*LogoutReq))
@@ -152,7 +152,7 @@ func _UserAuth_Logout_Handler(srv interface{}, ctx context.Context, dec func(int
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var UserAuth_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "userAuth",
+	ServiceName: "user.userAuth",
 	HandlerType: (*UserAuthServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
