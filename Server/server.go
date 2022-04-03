@@ -8,18 +8,16 @@ import (
 	"log"
 	"net"
 
-	// "os"
+	// "golang.org/x/crypto/bcrypt"
 	pb "server/protos/user"
 
 	_ "github.com/lib/pq"
-
-	// "github.com/jackc/pgx/v4"
 	"google.golang.org/grpc"
-	// "golang.org/x/crypto/bcrypt"
 )
 
 var (
-	port = flag.Int("port", 50051, "The server port")
+	port   = flag.Int("port", 50051, "The server port")
+	db_url = "postgresql://postgres:postgres@localhost:5432/postgres"
 )
 
 type userAuthServer struct {
@@ -44,15 +42,16 @@ func (s *userAuthServer) Logout(ctx context.Context, in *pb.LogoutReq) (*pb.ApiR
 	return &pb.ApiRes{ResCode: 200, Message: "successfully logged out"}, nil
 }
 
-// func verifyRegReq(in *pb.RegReq) error {
-// 	if in.GetUsername() == "" {
-// 		return fmt.Errorf("username is empty")
-// 	}
-// 	if in.GetPassword() == "" {
-// 		return fmt.Errorf("password is empty")
-// 	}
-// 	return nil
-// }
+func verifyRegReq(in *pb.RegReq) error {
+	if in.GetUsername() == "" {
+		return fmt.Errorf("username cannot be empty")
+	}
+	// is username already in database? if yes, return error
+	if len(in.GetPassword()) < 6 {
+		return fmt.Errorf("password must be at least 6 characters")
+	}
+	return nil
+}
 
 // func verifyLoginReq(in *pb.LoginReq) error {
 // 	if in.GetUsername() == "" {
@@ -70,32 +69,32 @@ func (s *userAuthServer) Logout(ctx context.Context, in *pb.LogoutReq) (*pb.ApiR
 // 	password string
 // }
 
-func initDbConn() {
-	db_url := "postgresql://postgres:postgres@localhost:5432/postgres"
+func initDbConn() *sql.DB {
 	conn, err := sql.Open("postgres", db_url)
 	if err != nil {
 		log.Fatalf("could not open postgresql connection: %v", err)
 	}
 	log.Printf("Connected to database at port 5432")
-	defer conn.Close()
+	return conn
 }
 
 func main() {
-	db_url := "postgresql://postgres:password@localhost:5432/grpc_assignment_db"
+	// establish database connection
 	conn, err := sql.Open("postgres", db_url)
 	if err != nil {
 		log.Fatalf("could not open postgresql connection: %v", err)
 	}
 	log.Printf("Connected to database at port 5432")
 	defer conn.Close()
-	// initDbConn()
 
+	// Query database
 	data, err := conn.Query("SELECT * FROM user")
 	if err != nil {
 		log.Fatalf("could not query database: %v", err)
 	}
 	defer data.Close()
 
+	// usual code
 	flag.Parse()
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
 	if err != nil {
