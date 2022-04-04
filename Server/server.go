@@ -18,7 +18,7 @@ import (
 
 var (
 	port   = flag.Int("port", 50051, "The server port")
-	db_url = "postgresql://postgres:postgres@localhost:5432/postgres"
+	db_url = "postgresql://postgres:password@localhost:5432/grpc_assignment_db"
 )
 
 type userAuthServer struct {
@@ -47,6 +47,34 @@ func (s *userAuthServer) Register(ctx context.Context, in *pb.RegReq) (*pb.ApiRe
 }
 
 func (s *userAuthServer) Login(ctx context.Context, in *pb.LoginReq) (*pb.ApiRes, error) {
+	conn := initDbConn()
+	defer conn.Close()
+	if err := verifyLoginReq(in, conn); err != nil {
+		return &pb.ApiRes{ResCode: 400, Message: err.Error()}, nil
+	}
+	// hashed, err := bcrypt.GenerateFromPassword([]byte(in.GetPassword()), 16)
+	// if err != nil {
+	// 	return &pb.ApiRes{ResCode: 500, Message: "could not hash password"}, nil
+	// }
+	sqlStatement := `
+	SELECT password FROM user WHERE username = $1`
+	var hashedPass string
+	row := conn.QueryRow(sqlStatement, in.GetUsername())
+	switch err := row.Scan(&hashedPass); err {
+	case sql.ErrNoRows:
+		fmt.Println("No rows were returned!")
+	case nil:
+		// compare hashed password with password in database and return error if not equal
+		if err := bcrypt.CompareHashAndPassword([]byte(hashedPass), []byte(in.GetPassword())); err != nil {
+			return &pb.ApiRes{ResCode: 400, Message: "password is incorrect"}, nil
+		}
+		log.Printf("Logged in: %v", in.GetUsername())
+		return &pb.ApiRes{ResCode: 200, Message: "login was successful"}, nil
+	default:
+		log.Fatalf("could not scan row: %v", err)
+	}
+
+	// check if username exists in database and password is correct
 	// if username is in database, and password is correct, login, and return success message to client
 	// else, return error message to client that username is not in database or password is wrong
 	log.Printf("Logged in: %v", in.GetUsername())
