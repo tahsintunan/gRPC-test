@@ -8,8 +8,9 @@ import (
 	"log"
 	"net"
 
-	// "golang.org/x/crypto/bcrypt"
 	pb "server/protos/user"
+
+	"golang.org/x/crypto/bcrypt"
 
 	_ "github.com/lib/pq"
 	"google.golang.org/grpc"
@@ -30,15 +31,19 @@ func (s *userAuthServer) Register(ctx context.Context, in *pb.RegReq) (*pb.ApiRe
 	if err := verifyRegReq(in, conn); err != nil {
 		return &pb.ApiRes{ResCode: 400, Message: err.Error()}, nil
 	}
+	hashed, err := bcrypt.GenerateFromPassword([]byte(in.GetPassword()), 16)
+	if err != nil {
+		return &pb.ApiRes{ResCode: 500, Message: "could not hash password"}, nil
+	}
 	sqlStatement := `
 	INSERT INTO user (email, username, password)
 	VALUES ($1, $2, $3)`
-	_, err := conn.Exec(sqlStatement, in.GetEmail(), in.GetUsername(), in.GetPassword())
+	_, err = conn.Exec(sqlStatement, in.GetEmail(), in.GetUsername(), hashed)
 	if err != nil {
 		return &pb.ApiRes{ResCode: 400, Message: err.Error()}, nil
 	}
 	log.Printf("Registered: %v", in.GetUsername())
-	return &pb.ApiRes{ResCode: 200, Message: "new user successfully registered"}, nil
+	return &pb.ApiRes{ResCode: 200, Message: "registration was successful"}, nil
 }
 
 func (s *userAuthServer) Login(ctx context.Context, in *pb.LoginReq) (*pb.ApiRes, error) {
