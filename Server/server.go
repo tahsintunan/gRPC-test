@@ -140,22 +140,6 @@ func initDbConn() *sql.DB {
 }
 
 func main() {
-	// establish database connection
-	conn, err := sql.Open("postgres", db_url)
-	if err != nil {
-		log.Fatalf("could not open postgresql connection: %v", err)
-	}
-	log.Printf("Connected to database at port 5432")
-	defer conn.Close()
-
-	// Query database
-	data, err := conn.Query("SELECT * FROM user")
-	if err != nil {
-		log.Fatalf("could not query database: %v", err)
-	}
-	defer data.Close()
-
-	// usual code
 	flag.Parse()
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
 	if err != nil {
