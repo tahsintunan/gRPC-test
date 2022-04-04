@@ -135,7 +135,6 @@ func initDbConn() *sql.DB {
 	if err != nil {
 		log.Fatalf("could not open postgresql connection: %v", err)
 	}
-	log.Printf("Connected to database at port 5432")
 	return conn
 }
 
