@@ -47,38 +47,18 @@ func (s *userAuthServer) Register(ctx context.Context, in *pb.RegReq) (*pb.ApiRe
 }
 
 func (s *userAuthServer) Login(ctx context.Context, in *pb.LoginReq) (*pb.ApiRes, error) {
+	// establish connection to postgresql database
 	conn := initDbConn()
 	defer conn.Close()
+
+	// verify login request
 	if err := verifyLoginReq(in, conn); err != nil {
 		return &pb.ApiRes{ResCode: 400, Message: err.Error()}, nil
 	}
-	// hashed, err := bcrypt.GenerateFromPassword([]byte(in.GetPassword()), 16)
-	// if err != nil {
-	// 	return &pb.ApiRes{ResCode: 500, Message: "could not hash password"}, nil
-	// }
-	sqlStatement := `
-	SELECT password FROM user WHERE username = $1`
-	var hashedPass string
-	row := conn.QueryRow(sqlStatement, in.GetUsername())
-	switch err := row.Scan(&hashedPass); err {
-	case sql.ErrNoRows:
-		fmt.Println("No rows were returned!")
-	case nil:
-		// compare hashed password with password in database and return error if not equal
-		if err := bcrypt.CompareHashAndPassword([]byte(hashedPass), []byte(in.GetPassword())); err != nil {
-			return &pb.ApiRes{ResCode: 400, Message: "password is incorrect"}, nil
-		}
-		log.Printf("Logged in: %v", in.GetUsername())
-		return &pb.ApiRes{ResCode: 200, Message: "login was successful"}, nil
-	default:
-		log.Fatalf("could not scan row: %v", err)
-	}
 
-	// check if username exists in database and password is correct
-	// if username is in database, and password is correct, login, and return success message to client
-	// else, return error message to client that username is not in database or password is wrong
+	// login successful
 	log.Printf("Logged in: %v", in.GetUsername())
-	return &pb.ApiRes{ResCode: 200, Message: "success"}, nil
+	return &pb.ApiRes{ResCode: 200, Message: fmt.Sprintf("Login successful. Logged in as: %v", in.GetUsername())}, nil
 }
 
 func (s *userAuthServer) Logout(ctx context.Context, in *pb.LogoutReq) (*pb.ApiRes, error) {
@@ -87,28 +67,40 @@ func (s *userAuthServer) Logout(ctx context.Context, in *pb.LogoutReq) (*pb.ApiR
 
 func verifyRegReq(in *pb.RegReq, conn *sql.DB) error {
 	if in.GetEmail() == "" {
-		return fmt.Errorf("email cannot be empty")
+		return fmt.Errorf("Email cannot be empty")
 	}
-	// is email already in database? if yes, return error
 	if in.GetUsername() == "" {
-		return fmt.Errorf("username cannot be empty")
+		return fmt.Errorf("Username cannot be empty")
 	}
-	// is username already in database? if yes, return error
 	if len(in.GetPassword()) < 6 {
-		return fmt.Errorf("password must be at least 6 characters")
+		return fmt.Errorf("Password cannot be less than 6 characters")
 	}
+
+	// is email already in database? if yes, return error
+	// is username already in database? if yes, return error
+
 	return nil
 }
 
 func verifyLoginReq(in *pb.LoginReq, conn *sql.DB) error {
 	if in.GetUsername() == "" {
-		return fmt.Errorf("username is empty")
+		return fmt.Errorf("Username cannot be empty")
 	}
-	// if username not in database, return error
-	if len(in.GetPassword()) < 6 {
-		return fmt.Errorf("password is less than 6 characters")
+
+	sqlStatement := `SELECT password FROM user WHERE username = $1`
+	var hashedPass string
+	err := conn.QueryRow(sqlStatement, in.GetUsername()).Scan(&hashedPass)
+	switch err {
+	case nil:
+		if err := bcrypt.CompareHashAndPassword([]byte(hashedPass), []byte(in.GetPassword())); err != nil {
+			return fmt.Errorf("Password is incorrect")
+		}
+	case sql.ErrNoRows:
+		return fmt.Errorf("No registered user found by this username")
+	default:
+		log.Fatalf("could not scan row: %v", err)
 	}
-	// if username in database and password is correct, return success
+
 	return nil
 }
 
