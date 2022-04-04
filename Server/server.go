@@ -10,9 +10,8 @@ import (
 
 	pb "server/protos/user"
 
-	"golang.org/x/crypto/bcrypt"
-
 	_ "github.com/lib/pq"
+	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc"
 )
 
@@ -26,24 +25,25 @@ type userAuthServer struct {
 }
 
 func (s *userAuthServer) Register(ctx context.Context, in *pb.RegReq) (*pb.ApiRes, error) {
+	// establish connection to postgresql database
 	conn := initDbConn()
 	defer conn.Close()
+
+	// verify registration request
 	if err := verifyRegReq(in, conn); err != nil {
 		return &pb.ApiRes{ResCode: 400, Message: err.Error()}, nil
 	}
-	hashed, err := bcrypt.GenerateFromPassword([]byte(in.GetPassword()), 16)
-	if err != nil {
-		return &pb.ApiRes{ResCode: 500, Message: "could not hash password"}, nil
-	}
-	sqlStatement := `
-	INSERT INTO user (email, username, password)
-	VALUES ($1, $2, $3)`
-	_, err = conn.Exec(sqlStatement, in.GetEmail(), in.GetUsername(), hashed)
+
+	// register user
+	sqlStatement := `INSERT INTO "public".user (email, username, password) VALUES ($1, $2, $3)`
+
+	hashed, _ := bcrypt.GenerateFromPassword([]byte(in.GetPassword()), bcrypt.DefaultCost)
+	_, err := conn.Exec(sqlStatement, in.GetEmail(), in.GetUsername(), hashed)
 	if err != nil {
 		return &pb.ApiRes{ResCode: 400, Message: err.Error()}, nil
 	}
 	log.Printf("Registered: %v", in.GetUsername())
-	return &pb.ApiRes{ResCode: 200, Message: "registration was successful"}, nil
+	return &pb.ApiRes{ResCode: 200, Message: fmt.Sprintf("Registration successful. Registered as: %v", in.GetUsername())}, nil
 }
 
 func (s *userAuthServer) Login(ctx context.Context, in *pb.LoginReq) (*pb.ApiRes, error) {
@@ -56,16 +56,19 @@ func (s *userAuthServer) Login(ctx context.Context, in *pb.LoginReq) (*pb.ApiRes
 		return &pb.ApiRes{ResCode: 400, Message: err.Error()}, nil
 	}
 
-	// login successful
+	// login user
 	log.Printf("Logged in: %v", in.GetUsername())
 	return &pb.ApiRes{ResCode: 200, Message: fmt.Sprintf("Login successful. Logged in as: %v", in.GetUsername())}, nil
 }
 
 func (s *userAuthServer) Logout(ctx context.Context, in *pb.LogoutReq) (*pb.ApiRes, error) {
-	return &pb.ApiRes{ResCode: 200, Message: "successfully logged out"}, nil
+	return &pb.ApiRes{ResCode: 200, Message: "Successfully logged out"}, nil
 }
 
 func verifyRegReq(in *pb.RegReq, conn *sql.DB) error {
+	if in.GetEmail() == "" && in.GetUsername() == "" {
+		return fmt.Errorf("Email and username cannot be empty")
+	}
 	if in.GetEmail() == "" {
 		return fmt.Errorf("Email cannot be empty")
 	}
@@ -77,7 +80,30 @@ func verifyRegReq(in *pb.RegReq, conn *sql.DB) error {
 	}
 
 	// is email already in database? if yes, return error
+	sqlStatement := `SELECT email FROM "public".user WHERE email = $1`
+	var email string
+	err := conn.QueryRow(sqlStatement, in.GetEmail()).Scan(&email)
+	switch err {
+	case nil:
+		return fmt.Errorf("Email already exists")
+	case sql.ErrNoRows:
+		// email is not in database
+	default:
+		return fmt.Errorf("Could not query database: %v", err)
+	}
+
 	// is username already in database? if yes, return error
+	sqlStatement = `SELECT username FROM "public".user WHERE username = $1`
+	var username string
+	err = conn.QueryRow(sqlStatement, in.GetUsername()).Scan(&username)
+	switch err {
+	case nil:
+		return fmt.Errorf("Username already exists")
+	case sql.ErrNoRows:
+		// username is not in database
+	default:
+		return fmt.Errorf("Could not query database: %v", err)
+	}
 
 	return nil
 }
@@ -87,7 +113,7 @@ func verifyLoginReq(in *pb.LoginReq, conn *sql.DB) error {
 		return fmt.Errorf("Username cannot be empty")
 	}
 
-	sqlStatement := `SELECT password FROM user WHERE username = $1`
+	sqlStatement := `SELECT password FROM "public".user WHERE username = $1`
 	var hashedPass string
 	err := conn.QueryRow(sqlStatement, in.GetUsername()).Scan(&hashedPass)
 	switch err {
@@ -103,12 +129,6 @@ func verifyLoginReq(in *pb.LoginReq, conn *sql.DB) error {
 
 	return nil
 }
-
-// type user struct{
-// 	email string
-// 	username string
-// 	password string
-// }
 
 func initDbConn() *sql.DB {
 	conn, err := sql.Open("postgres", db_url)
