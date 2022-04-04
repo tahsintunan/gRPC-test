@@ -25,10 +25,20 @@ type userAuthServer struct {
 }
 
 func (s *userAuthServer) Register(ctx context.Context, in *pb.RegReq) (*pb.ApiRes, error) {
-	// if username is not in database, and everything is alright, register, and store in database
-	// else, return error message to client that username is already in database or something is wrong
+	conn := initDbConn()
+	defer conn.Close()
+	if err := verifyRegReq(in, conn); err != nil {
+		return &pb.ApiRes{ResCode: 400, Message: err.Error()}, nil
+	}
+	sqlStatement := `
+	INSERT INTO user (email, username, password)
+	VALUES ($1, $2, $3)`
+	_, err := conn.Exec(sqlStatement, in.GetEmail(), in.GetUsername(), in.GetPassword())
+	if err != nil {
+		return &pb.ApiRes{ResCode: 400, Message: err.Error()}, nil
+	}
 	log.Printf("Registered: %v", in.GetUsername())
-	return &pb.ApiRes{ResCode: 200, Message: "success"}, nil
+	return &pb.ApiRes{ResCode: 200, Message: "new user successfully registered"}, nil
 }
 
 func (s *userAuthServer) Login(ctx context.Context, in *pb.LoginReq) (*pb.ApiRes, error) {
@@ -42,7 +52,11 @@ func (s *userAuthServer) Logout(ctx context.Context, in *pb.LogoutReq) (*pb.ApiR
 	return &pb.ApiRes{ResCode: 200, Message: "successfully logged out"}, nil
 }
 
-func verifyRegReq(in *pb.RegReq) error {
+func verifyRegReq(in *pb.RegReq, conn *sql.DB) error {
+	if in.GetEmail() == "" {
+		return fmt.Errorf("email cannot be empty")
+	}
+	// is email already in database? if yes, return error
 	if in.GetUsername() == "" {
 		return fmt.Errorf("username cannot be empty")
 	}
@@ -53,15 +67,17 @@ func verifyRegReq(in *pb.RegReq) error {
 	return nil
 }
 
-// func verifyLoginReq(in *pb.LoginReq) error {
-// 	if in.GetUsername() == "" {
-// 		return fmt.Errorf("username is empty")
-// 	}
-// 	if in.GetPassword() == "" {
-// 		return fmt.Errorf("password is empty")
-// 	}
-// 	return nil
-// }
+func verifyLoginReq(in *pb.LoginReq, conn *sql.DB) error {
+	if in.GetUsername() == "" {
+		return fmt.Errorf("username is empty")
+	}
+	// if username not in database, return error
+	if len(in.GetPassword()) < 6 {
+		return fmt.Errorf("password is less than 6 characters")
+	}
+	// if username in database and password is correct, return success
+	return nil
+}
 
 // type user struct{
 // 	email string
