@@ -1,4 +1,4 @@
-module server
+module github.com/TahsinTunan/gRPC-test
 
 go 1.18
 

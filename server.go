@@ -8,7 +8,7 @@ import (
 	"log"
 	"net"
 
-	pb "server/protos/user"
+	pb "github.com/TahsinTunan/gRPC-test/protos/user"
 
 	_ "github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
@@ -16,8 +16,11 @@ import (
 )
 
 var (
-	port   = flag.Int("port", 50051, "The server port")
-	db_url = "postgresql://postgres:password@localhost:5432/grpc_assignment_db"
+	server_port = flag.Int("server_port", 50051, "The server port")
+	db_port     = flag.Int("db_port", 5432, "The database port")
+	db_user     = flag.String("db_user", "postgres", "The database user")
+	db_password = flag.String("db_password", "password", "The database password")
+	db_name     = flag.String("db_name", "grpc_assignment_db", "The database name")
 )
 
 type userAuthServer struct {
@@ -131,6 +134,7 @@ func verifyLoginReq(in *pb.LoginReq, conn *sql.DB) error {
 }
 
 func initDbConn() *sql.DB {
+	db_url := fmt.Sprintf("postgresql://%v:%v@localhost:%v/%v", *db_user, *db_password, *db_port, *db_name)
 	conn, err := sql.Open("postgres", db_url)
 	if err != nil {
 		log.Fatalf("could not open postgresql connection: %v", err)
@@ -140,7 +144,7 @@ func initDbConn() *sql.DB {
 
 func main() {
 	flag.Parse()
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *server_port))
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
