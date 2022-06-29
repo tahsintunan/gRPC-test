@@ -8,7 +8,7 @@ import (
 	"log"
 	"net"
 
-	pb "github.com/TahsinTunan/gRPC-test/protos/user"
+	pb "github.com/tahsintunan/gRPC-test/protos/user"
 
 	_ "github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
